@@ -83,41 +83,40 @@
                             // Si tu GeoTIFF tiene múltiples bandas (ej. RGB), necesitarías acceder a pixelValues[0], pixelValues[1], pixelValues[2]
                             const value = pixelValues[0]; 
 
-                            // --- ¡IMPORTANTE! AJUSTA ESTOS VALORES SEGÚN TU DATA REAL ---
-                            // Necesitas conocer el rango mínimo y máximo de los valores de tu GeoTIFF.
-                            // Puedes encontrarlos en las propiedades del GeoTIFF en QGIS, ArcGIS, o con herramientas como gdalinfo.
-                            const minValue = 0;   // <--- Reemplaza con el valor mínimo real de tus datos
-                            const maxValue = 255; // <--- Reemplaza con el valor máximo real de tus datos
-                            // ------------------------------------------------------------
-
                             // Si el valor es el NoDataValue, lo hacemos transparente.
-                            // La librería ya lo maneja por defecto, pero es bueno ser explícito aquí.
                             if (georaster.noDataValue !== undefined && value === georaster.noDataValue) {
                                 return null; // Retorna null para que el píxel sea completamente transparente
                             }
 
-                            // Normalizar el valor a un rango de 0 a 1
-                            let normalizedValue = (value - minValue) / (maxValue - minValue);
-                            // Asegurarse de que el valor normalizado esté entre 0 y 1
-                            normalizedValue = Math.max(0, Math.min(1, normalizedValue)); 
+                            // --- RAMPA DE COLOR PERSONALIZADA (basada en tus valores) ---
+                            // Estructura: { umbral: [R, G, B] }
+                            const colorRamp = [
+                                { threshold: 84.0, color: [240, 240, 240] },
+                                { threshold: 78.0, color: [128, 0, 128] },
+                                { threshold: 72.0, color: [200, 0, 90] },
+                                { threshold: 66.0, color: [255, 0, 0] },
+                                { threshold: 60.0, color: [255, 127, 0] },
+                                { threshold: 54.0, color: [255, 187, 0] },
+                                { threshold: 48.0, color: [255, 255, 0] },
+                                { threshold: 42.0, color: [0, 255, 0] },
+                                { threshold: 36.0, color: [0, 192, 0] },
+                                { threshold: 30.0, color: [67, 131, 35] },
+                                { threshold: 24.0, color: [0, 252, 252] },
+                                { threshold: 18.0, color: [0, 148, 252] },
+                                { threshold: 12.0, color: [0, 0, 252] }
+                            ];
 
-                            // --- EJEMPLO DE RAMPA DE COLOR ---
-                            // Aquí puedes definir tu propia rampa de color.
-                            // Este ejemplo va de transparente/blanco a naranja, pasando por amarillos.
-                            // Ajusta los umbrales (0.1, 0.3, 0.6) y los colores (r, g, b, a) a tu gusto.
-                            let r, g, b, a;
-
-                            if (normalizedValue < 0.1) { // Valores muy bajos: casi transparentes
-                                r = 255; g = 255; b = 255; a = 0; // Blanco transparente
-                            } else if (normalizedValue < 0.3) { // Valores bajos: amarillo muy claro
-                                r = 255; g = 255; b = 150; a = 0.4; // Amarillo claro, semi-transparente
-                            } else if (normalizedValue < 0.6) { // Valores medios: amarillo
-                                r = 255; g = 200; b = 0; a = 0.7; // Amarillo más intenso, semi-transparente
-                            } else { // Valores altos: naranja
-                                r = 255; g = 100; b = 0; a = 0.9; // Naranja, casi opaco
+                            // Recorremos la rampa para encontrar el color correcto
+                            for (let i = 0; i < colorRamp.length; i++) {
+                                if (value >= colorRamp[i].threshold) {
+                                    const [r, g, b] = colorRamp[i].color;
+                                    // Devolvemos el color con opacidad total (puedes cambiar el '1' por un valor menor si quieres transparencia)
+                                    return `rgba(${r}, ${g}, ${b}, 1)`;
+                                }
                             }
 
-                            return `rgba(${r}, ${g}, ${b}, ${a})`;
+                            // Si el valor es menor que el umbral más bajo (12.0), lo hacemos transparente
+                            return null;
                         }
                     });
                     
