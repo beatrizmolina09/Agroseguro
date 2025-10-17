@@ -45,8 +45,17 @@
         const centroEspaña = [40.4167, -3.70325];
         const zoomInicial = 6;
 
+        // Definir los límites geográficos para España (incluyendo Canarias y Baleares)
+        const southWest = L.latLng(27.5, -18.5); // Esquina inferior izquierda
+        const northEast = L.latLng(44, 5);       // Esquina superior derecha
+        const bounds = L.latLngBounds(southWest, northEast);
+
         // Inicializar el mapa en el div con id="map"
-        const map = L.map('map').setView(centroEspaña, zoomInicial);
+        const map = L.map('map', {
+            maxBounds: bounds,          // Restringir el mapa a estos límites
+            maxBoundsViscosity: 1.0,    // Hace que los límites sean "sólidos" y no se puedan arrastrar más allá
+            minZoom: 5                  // Opcional: Evita que el usuario se aleje demasiado
+        }).setView(centroEspaña, zoomInicial);
 
         // Añadir una capa base (el mapa del mundo) de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -69,6 +78,9 @@
             .then(arrayBuffer => {
                 parseGeoraster(arrayBuffer).then(georaster => {
                     console.log("GeoRaster cargado:", georaster);
+        // --- MÉTODO OPTIMIZADO: USAR TESELAS (TILES) ---
+        // Reemplaza 'teselas' con el nombre de la carpeta que generaste con QGIS.
+        const urlTeselas = 'teselas/{z}/{x}/{y}.png';
 
                     // Crear la capa para Leaflet con el GeoTIFF
                     const layer = new GeoRasterLayer({
@@ -82,11 +94,21 @@
                             // Asumimos que es un GeoTIFF de una sola banda.
                             // Si tu GeoTIFF tiene múltiples bandas (ej. RGB), necesitarías acceder a pixelValues[0], pixelValues[1], pixelValues[2]
                             const value = pixelValues[0]; 
+        L.tileLayer(urlTeselas, {
+            tms: false,      // Si usaste QGIS, esto suele ser false. Si usaste gdal2tiles, puede ser true.
+            opacity: 0.8,    // Puedes ajustar la opacidad de la capa de teselas.
+            minZoom: 6,      // El zoom mínimo que generaste.
+            maxZoom: 14,     // El zoom máximo que generaste.
+            attribution: 'Mis Datos Geoespaciales' // Tu propia atribución.
+        }).addTo(map);
 
                             // Si el valor es el NoDataValue, lo hacemos transparente.
                             if (georaster.noDataValue !== undefined && value === georaster.noDataValue) {
                                 return null; // Retorna null para que el píxel sea completamente transparente
                             }
+        // NOTA: Con este método, la función de 'clic para obtener valor' deja de funcionar
+        // porque el navegador ya no tiene acceso a los datos originales del GeoTIFF, solo a las imágenes.
+        // Recuperar esa funcionalidad requeriría técnicas más avanzadas (como un servicio de backend).
 
                             // --- RAMPA DE COLOR PERSONALIZADA (basada en tus valores) ---
                             // Estructura: { umbral: [R, G, B] }
