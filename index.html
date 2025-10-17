@@ -125,6 +125,29 @@
 
                     // Opcional: Hacer que el mapa se ajuste a la extensión de tu GeoTIFF
                     map.fitBounds(layer.getBounds());
+
+                    // --- AÑADIR EVENTO DE CLIC PARA OBTENER EL VALOR DEL PÍXEL ---
+                    map.on('click', function(e) {
+                        const latlng = e.latlng;
+
+                        // Usamos la librería georaster para obtener el valor en las coordenadas del clic
+                        // El tercer argumento '0' es para obtener el valor de la primera banda (banda 0)
+                        const values = georaster.getValues(latlng, null, 0);
+                        const value = values[0]; // El resultado es un array, tomamos el primer elemento
+
+                        // Comprobamos si el valor es válido y no es el valor NoData
+                        if (value !== undefined && value !== georaster.noDataValue) {
+                            // Formateamos el valor para mostrarlo con dos decimales
+                            const formattedValue = parseFloat(value).toFixed(2);
+
+                            // Creamos y abrimos un popup en el lugar del clic
+                            L.popup()
+                                .setLatLng(latlng)
+                                .setContent(`<b>Valor:</b> ${formattedValue}`)
+                                .openOn(map);
+                        }
+                        // Si no hay valor o es NoData, no hacemos nada (no se abre el popup)
+                    });
                 });
             })
             .catch(error => {
