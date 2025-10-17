@@ -110,7 +110,7 @@
                             for (let i = 0; i < colorRamp.length; i++) {
                                 if (value >= colorRamp[i].threshold) {
                                     const [r, g, b] = colorRamp[i].color;
-                                    // Devolvemos el color con opacidad total (puedes cambiar el '1' por un valor menor si quieres transparencia)
+                                    // Devolvemos el color con opacidad total (1 = 100% opaco)
                                     return `rgba(${r}, ${g}, ${b}, 1)`;
                                 }
                             }
