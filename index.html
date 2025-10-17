@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Portfolio de Mapas</title>
+
+    <!-- 1. Archivos CSS de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+    <!-- Estilo para que el mapa ocupe toda la pantalla -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 2. El contenedor del mapa -->
+    <div id="map"></div>
+
+    <!-- 3. Archivos JavaScript (Leaflet y los plugins) -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    
+    <!-- Plugins para leer el GeoTIFF -->
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+
+    <script>
+        // 4. Lógica del mapa
+
+        // Coordenadas para centrar el mapa en España y nivel de zoom
+        const centroEspaña = [40.4167, -3.70325];
+        const zoomInicial = 6;
+
+        // Inicializar el mapa en el div con id="map"
+        const map = L.map('map').setView(centroEspaña, zoomInicial);
+
+        // Añadir una capa base (el mapa del mundo) de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // URL de tu archivo GeoTIFF.
+        // ¡IMPORTANTE! Cambia "mi_mapa.tiff" por el nombre exacto de tu archivo.
+        const url_geotiff = "mi_mapa.tiff";
+
+        // Usamos fetch para cargar el archivo y parsearlo
+        fetch(url_geotiff)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+                parseGeoraster(arrayBuffer).then(georaster => {
+                    console.log("GeoRaster cargado:", georaster);
+
+                    // Crear la capa para Leaflet con el GeoTIFF
+                    const layer = new GeoRasterLayer({
+                        georaster: georaster,
+                        opacity: 0.7, // Puedes ajustar la opacidad
+                        resolution: 256 // Calidad de la visualización
+                    });
+                    
+                    // Añadir la capa al mapa
+                    layer.addTo(map);
+
+                    // Opcional: Hacer que el mapa se ajuste a la extensión de tu GeoTIFF
+                    map.fitBounds(layer.getBounds());
+                });
+            })
+            .catch(error => {
+                console.error("Error al cargar o procesar el GeoTIFF:", error);
+                alert("No se pudo cargar el archivo GeoTIFF. Revisa la consola para más detalles.");
+            });
+
+    </script>
+
+</body>
+</html>
