@@ -63,21 +63,74 @@
         // ¡IMPORTANTE! Cambia "mi_mapa.tiff" por el nombre exacto de tu archivo.
         const url_geotiff = "mosaico_20251013_Rmax.tif";
 
-        // --- MÉTODO OPTIMIZADO: USAR TESELAS (TILES) ---
-        // Reemplaza 'teselas' con el nombre de la carpeta que generaste con QGIS.
-        const urlTeselas = 'teselas/{z}/{x}/{y}.png';
+        // Usamos fetch para cargar el archivo y parsearlo
+        fetch(url_geotiff)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+                parseGeoraster(arrayBuffer).then(georaster => {
+                    console.log("GeoRaster cargado:", georaster);
 
-        L.tileLayer(urlTeselas, {
-            tms: false,      // Si usaste QGIS, esto suele ser false. Si usaste gdal2tiles, puede ser true.
-            opacity: 0.8,    // Puedes ajustar la opacidad de la capa de teselas.
-            minZoom: 6,      // El zoom mínimo que generaste.
-            maxZoom: 14,     // El zoom máximo que generaste.
-            attribution: 'Mis Datos Geoespaciales' // Tu propia atribución.
-        }).addTo(map);
+                    // Crear la capa para Leaflet con el GeoTIFF
+                    const layer = new GeoRasterLayer({
+                        georaster: georaster,
+                        opacity: 1.0, // Opacidad general de la capa (puedes ajustarla si quieres que toda la capa sea semi-transparente)
+                        resolution: 256, // Calidad de la visualización
+                        
+                        // Función para mapear los valores de los píxeles a colores
+                        // Esto es crucial para la simbología de tu GeoTIFF
+                        pixelValuesToColorFn: function(pixelValues) {
+                            // Asumimos que es un GeoTIFF de una sola banda.
+                            // Si tu GeoTIFF tiene múltiples bandas (ej. RGB), necesitarías acceder a pixelValues[0], pixelValues[1], pixelValues[2]
+                            const value = pixelValues[0]; 
 
-        // NOTA: Con este método, la función de 'clic para obtener valor' deja de funcionar
-        // porque el navegador ya no tiene acceso a los datos originales del GeoTIFF, solo a las imágenes.
-        // Recuperar esa funcionalidad requeriría técnicas más avanzadas (como un servicio de backend).
+                            // Si el valor es el NoDataValue, lo hacemos transparente.
+                            if (georaster.noDataValue !== undefined && value === georaster.noDataValue) {
+                                return null; // Retorna null para que el píxel sea completamente transparente
+                            }
+
+                            // --- RAMPA DE COLOR PERSONALIZADA (basada en tus valores) ---
+                            // Estructura: { umbral: [R, G, B] }
+                            const colorRamp = [
+                                { threshold: 84.0, color: [240, 240, 240] },
+                                { threshold: 78.0, color: [128, 0, 128] },
+                                { threshold: 72.0, color: [200, 0, 90] },
+                                { threshold: 66.0, color: [255, 0, 0] },
+                                { threshold: 60.0, color: [255, 127, 0] },
+                                { threshold: 54.0, color: [255, 187, 0] },
+                                { threshold: 48.0, color: [255, 255, 0] },
+                                { threshold: 42.0, color: [0, 255, 0] },
+                                { threshold: 36.0, color: [0, 192, 0] },
+                                { threshold: 30.0, color: [67, 131, 35] },
+                                { threshold: 24.0, color: [0, 252, 252] },
+                                { threshold: 18.0, color: [0, 148, 252] },
+                                { threshold: 12.0, color: [0, 0, 252] }
+                            ];
+
+                            // Recorremos la rampa para encontrar el color correcto
+                            for (let i = 0; i < colorRamp.length; i++) {
+                                if (value >= colorRamp[i].threshold) {
+                                    const [r, g, b] = colorRamp[i].color;
+                                    // Devolvemos el color con opacidad total (1 = 100% opaco)
+                                    return `rgba(${r}, ${g}, ${b}, 1)`;
+                                }
+                            }
+
+                            // Si el valor es menor que el umbral más bajo (12.0), lo hacemos transparente
+                            return null;
+                        }
+                    });
+                    
+                    // Añadir la capa al mapa
+                    layer.addTo(map);
+
+                    // Opcional: Hacer que el mapa se ajuste a la extensión de tu GeoTIFF
+                    map.fitBounds(layer.getBounds());
+                });
+            })
+            .catch(error => {
+                console.error("Error al cargar o procesar el GeoTIFF:", error);
+                alert("No se pudo cargar el archivo GeoTIFF. Revisa la consola para más detalles.");
+            });
 
     </script>
 
