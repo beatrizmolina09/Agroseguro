@@ -31,7 +31,11 @@
 
     L.tileLayer(MAP_CONFIG.urlBase, { attribution: MAP_CONFIG.atribucionBase }).addTo(map);
     L.control.scale({ metric: true, imperial: false }).addTo(map);
+    
+    // Creamos un panel para el raster y le asignamos un z-index específico.
+    // Un valor por debajo de 400 (el panel de overlays) asegura que no intercepte los clics.
     map.createPane('rasterPane');
+    map.getPane('rasterPane').style.zIndex = 399;
 
     // --- 3. FUNCIÓN DE SIMBOLOGÍA ---
     function getColorForValue(value, noDataValue) {
