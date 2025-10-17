@@ -59,6 +59,10 @@
             imperial: false  // No mostrar el sistema imperial (millas/pies)
         }).addTo(map);
 
+        // --- SOLUCIÓN AL PROBLEMA DEL CLIC ---
+        // Creamos un panel específico para el raster para que no bloquee los clics del mapa.
+        map.createPane('rasterPane');
+
         // URL de tu archivo GeoTIFF.
         // ¡IMPORTANTE! Cambia "mi_mapa.tiff" por el nombre exacto de tu archivo.
         const url_geotiff = "mosaico_20251013_Rmax.tif";
@@ -75,6 +79,7 @@
                         georaster: georaster,
                         opacity: 1.0, // Opacidad general de la capa (puedes ajustarla si quieres que toda la capa sea semi-transparente)
                         resolution: 256, // Calidad de la visualización
+                        pane: 'rasterPane', // Asignamos la capa a nuestro panel personalizado
                         
                         // Función para mapear los valores de los píxeles a colores
                         // Esto es crucial para la simbología de tu GeoTIFF
