@@ -73,8 +73,52 @@
                     // Crear la capa para Leaflet con el GeoTIFF
                     const layer = new GeoRasterLayer({
                         georaster: georaster,
-                        opacity: 1.0, // Opacidad al 100% (totalmente opaco)
-                        resolution: 256 // Calidad de la visualización
+                        opacity: 1.0, // Opacidad general de la capa (puedes ajustarla si quieres que toda la capa sea semi-transparente)
+                        resolution: 256, // Calidad de la visualización
+                        
+                        // Función para mapear los valores de los píxeles a colores
+                        // Esto es crucial para la simbología de tu GeoTIFF
+                        pixelValuesToColorFn: function(pixelValues) {
+                            // Asumimos que es un GeoTIFF de una sola banda.
+                            // Si tu GeoTIFF tiene múltiples bandas (ej. RGB), necesitarías acceder a pixelValues[0], pixelValues[1], pixelValues[2]
+                            const value = pixelValues[0]; 
+
+                            // --- ¡IMPORTANTE! AJUSTA ESTOS VALORES SEGÚN TU DATA REAL ---
+                            // Necesitas conocer el rango mínimo y máximo de los valores de tu GeoTIFF.
+                            // Puedes encontrarlos en las propiedades del GeoTIFF en QGIS, ArcGIS, o con herramientas como gdalinfo.
+                            const minValue = 0;   // <--- Reemplaza con el valor mínimo real de tus datos
+                            const maxValue = 255; // <--- Reemplaza con el valor máximo real de tus datos
+                            // ------------------------------------------------------------
+
+                            // Si el valor es el NoDataValue, lo hacemos transparente.
+                            // La librería ya lo maneja por defecto, pero es bueno ser explícito aquí.
+                            if (georaster.noDataValue !== undefined && value === georaster.noDataValue) {
+                                return null; // Retorna null para que el píxel sea completamente transparente
+                            }
+
+                            // Normalizar el valor a un rango de 0 a 1
+                            let normalizedValue = (value - minValue) / (maxValue - minValue);
+                            // Asegurarse de que el valor normalizado esté entre 0 y 1
+                            normalizedValue = Math.max(0, Math.min(1, normalizedValue)); 
+
+                            // --- EJEMPLO DE RAMPA DE COLOR ---
+                            // Aquí puedes definir tu propia rampa de color.
+                            // Este ejemplo va de transparente/blanco a naranja, pasando por amarillos.
+                            // Ajusta los umbrales (0.1, 0.3, 0.6) y los colores (r, g, b, a) a tu gusto.
+                            let r, g, b, a;
+
+                            if (normalizedValue < 0.1) { // Valores muy bajos: casi transparentes
+                                r = 255; g = 255; b = 255; a = 0; // Blanco transparente
+                            } else if (normalizedValue < 0.3) { // Valores bajos: amarillo muy claro
+                                r = 255; g = 255; b = 150; a = 0.4; // Amarillo claro, semi-transparente
+                            } else if (normalizedValue < 0.6) { // Valores medios: amarillo
+                                r = 255; g = 200; b = 0; a = 0.7; // Amarillo más intenso, semi-transparente
+                            } else { // Valores altos: naranja
+                                r = 255; g = 100; b = 0; a = 0.9; // Naranja, casi opaco
+                            }
+
+                            return `rgba(${r}, ${g}, ${b}, ${a})`;
+                        }
                     });
                     
                     // Añadir la capa al mapa
