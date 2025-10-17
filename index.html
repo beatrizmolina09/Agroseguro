@@ -45,17 +45,8 @@
         const centroEspaña = [40.4167, -3.70325];
         const zoomInicial = 6;
 
-        // Definir los límites geográficos para España (incluyendo Canarias y Baleares)
-        const southWest = L.latLng(27.5, -18.5); // Esquina inferior izquierda
-        const northEast = L.latLng(44, 5);       // Esquina superior derecha
-        const bounds = L.latLngBounds(southWest, northEast);
-
         // Inicializar el mapa en el div con id="map"
-        const map = L.map('map', {
-            maxBounds: bounds,          // Restringir el mapa a estos límites
-            maxBoundsViscosity: 1.0,    // Hace que los límites sean "sólidos" y no se puedan arrastrar más allá
-            minZoom: 6                  // No permitir alejarse más que el zoom inicial
-        }).setView(centroEspaña, zoomInicial);
+        const map = L.map('map').setView(centroEspaña, zoomInicial);
 
         // Añadir una capa base (el mapa del mundo) de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -72,91 +63,21 @@
         // ¡IMPORTANTE! Cambia "mi_mapa.tiff" por el nombre exacto de tu archivo.
         const url_geotiff = "mosaico_20251013_Rmax.tif";
 
-        // Usamos fetch para cargar el archivo y parsearlo
-        fetch(url_geotiff)
-            .then(response => response.arrayBuffer())
-            .then(arrayBuffer => {
-                parseGeoraster(arrayBuffer).then(georaster => {
+        // --- MÉTODO OPTIMIZADO: USAR TESELAS (TILES) ---
+        // Reemplaza 'teselas' con el nombre de la carpeta que generaste con QGIS.
+        const urlTeselas = 'teselas/{z}/{x}/{y}.png';
 
-                    // Crear la capa para Leaflet con el GeoTIFF
-                    const layer = new GeoRasterLayer({
-                        georaster: georaster,
-                        opacity: 1.0,
-                        resolution: 256,
-                        pixelValuesToColorFn: function(pixelValues) {
-                            const value = pixelValues[0]; 
+        L.tileLayer(urlTeselas, {
+            tms: false,      // Si usaste QGIS, esto suele ser false. Si usaste gdal2tiles, puede ser true.
+            opacity: 0.8,    // Puedes ajustar la opacidad de la capa de teselas.
+            minZoom: 6,      // El zoom mínimo que generaste.
+            maxZoom: 14,     // El zoom máximo que generaste.
+            attribution: 'Mis Datos Geoespaciales' // Tu propia atribución.
+        }).addTo(map);
 
-                            // Si el valor es el NoDataValue, lo hacemos transparente.
-                            if (georaster.noDataValue !== undefined && value === georaster.noDataValue) {
-                                return null; // Retorna null para que el píxel sea completamente transparente
-                            }
-
-                            // --- RAMPA DE COLOR PERSONALIZADA (basada en tus valores) ---
-                            // Estructura: { umbral: [R, G, B] }
-                            const colorRamp = [
-                                { threshold: 84.0, color: [240, 240, 240] },
-                                { threshold: 78.0, color: [128, 0, 128] },
-                                { threshold: 72.0, color: [200, 0, 90] },
-                                { threshold: 66.0, color: [255, 0, 0] },
-                                { threshold: 60.0, color: [255, 127, 0] },
-                                { threshold: 54.0, color: [255, 187, 0] },
-                                { threshold: 48.0, color: [255, 255, 0] },
-                                { threshold: 42.0, color: [0, 255, 0] },
-                                { threshold: 36.0, color: [0, 192, 0] },
-                                { threshold: 30.0, color: [67, 131, 35] },
-                                { threshold: 24.0, color: [0, 252, 252] },
-                                { threshold: 18.0, color: [0, 148, 252] },
-                                { threshold: 12.0, color: [0, 0, 252] }
-                            ];
-
-                            // Recorremos la rampa para encontrar el color correcto
-                            for (let i = 0; i < colorRamp.length; i++) {
-                                if (value >= colorRamp[i].threshold) {
-                                    const [r, g, b] = colorRamp[i].color;
-                                    // Devolvemos el color con opacidad total (1 = 100% opaco)
-                                    return `rgba(${r}, ${g}, ${b}, 1)`;
-                                }
-                            }
-
-                            // Si el valor es menor que el umbral más bajo (12.0), lo hacemos transparente
-                            return null;
-                        }
-                    });
-                    
-                    // Añadir la capa al mapa
-                    layer.addTo(map);
-
-                    // Opcional: Hacer que el mapa se ajuste a la extensión de tu GeoTIFF
-                    map.fitBounds(layer.getBounds());
-
-                    // --- AÑADIR EVENTO DE CLIC PARA OBTENER EL VALOR DEL PÍXEL ---
-                    map.on('click', function(e) {
-                        const latlng = e.latlng;
-
-                        // Usamos la librería georaster para obtener el valor en las coordenadas del clic
-                        // El tercer argumento '0' es para obtener el valor de la primera banda (banda 0)
-                        const values = georaster.getValues(latlng, null, 0);
-                        const value = values[0]; // El resultado es un array, tomamos el primer elemento
-
-                        // Comprobamos si el valor es válido y no es el valor NoData
-                        if (value !== undefined && value !== georaster.noDataValue) {
-                            // Formateamos el valor para mostrarlo con dos decimales
-                            const formattedValue = parseFloat(value).toFixed(2);
-
-                            // Creamos y abrimos un popup en el lugar del clic
-                            L.popup()
-                                .setLatLng(latlng)
-                                .setContent(`<b>Valor:</b> ${formattedValue}`)
-                                .openOn(map);
-                        }
-                        // Si no hay valor o es NoData, no hacemos nada (no se abre el popup)
-                    });
-                });
-            })
-            .catch(error => {
-                console.error("Error al cargar o procesar el GeoTIFF:", error);
-                alert("No se pudo cargar el archivo GeoTIFF. Revisa la consola para más detalles.");
-            });
+        // NOTA: Con este método, la función de 'clic para obtener valor' deja de funcionar
+        // porque el navegador ya no tiene acceso a los datos originales del GeoTIFF, solo a las imágenes.
+        // Recuperar esa funcionalidad requeriría técnicas más avanzadas (como un servicio de backend).
 
     </script>
 
