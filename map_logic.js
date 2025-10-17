@@ -36,6 +36,9 @@
     // Un valor por debajo de 400 (el panel de overlays) asegura que no intercepte los clics.
     map.createPane('rasterPane');
     map.getPane('rasterPane').style.zIndex = 399;
+    // Hacemos que el panel sea "transparente" a los eventos del ratón.
+    // Esta es la solución definitiva para que los clics lleguen al mapa.
+    map.getPane('rasterPane').style.pointerEvents = 'none';
 
     // --- 3. FUNCIÓN DE SIMBOLOGÍA ---
     function getColorForValue(value, noDataValue) {
